@@ -1,4 +1,3 @@
-
 import { useCallback, useEffect, useState } from "react";
 import {
   createTicket,
@@ -6,8 +5,13 @@ import {
   getTicketMessages,
   updateTicketStatus,
   addTicketMessage,
+  getCurrentUser,
+  logoutUser,
 } from "./api";
+import Auth from "./Auth";
 import "./App.css";
+import CustomerDashboard from "./CustomerDashboard";
+import AgentDashboard from "./AgentDashboard";
 
 const emptyForm = {
   customer_name: "",
@@ -31,6 +35,38 @@ function App() {
   const [messageDraft, setMessageDraft] = useState("");
   const [detailLoading, setDetailLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [user, setUser] = useState(null);
+  const [authChecking, setAuthChecking] = useState(true);
+
+  
+  useEffect(() => {
+    let cancelled = false;
+
+    async function checkAuth() {
+      const token = localStorage.getItem("access_token");
+
+      if (!token) {
+        if (!cancelled) setAuthChecking(false);
+        return;
+      }
+
+      try {
+        const currentUser = await getCurrentUser();
+        if (!cancelled) setUser(currentUser);
+      } catch {
+        logoutUser();
+        if (!cancelled) setUser(null);
+      } finally {
+        if (!cancelled) setAuthChecking(false);
+      }
+    }
+
+    checkAuth();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const loadTickets = useCallback(async () => {
     try {
@@ -45,8 +81,14 @@ function App() {
   }, []);
 
   useEffect(() => {
-    loadTickets();
-  }, [loadTickets]);
+    if (
+      !authChecking &&
+      user &&
+      (user.role === "admin" || user.role === "agent")
+    ) {
+      loadTickets();
+    }
+  }, [authChecking, user, loadTickets]);
 
   const updateField = (event) => {
     const { name, value } = event.target;
@@ -160,6 +202,48 @@ async function sendMessage(event) {
   }
 }
 
+    
+  if (authChecking) {
+    return <div className="empty-state">Checking your session...</div>;
+  }
+
+  if (!user) {
+    return <Auth onLogin={setUser} />;
+  }
+
+  if (user.role === "customer") {
+    return (
+      <CustomerDashboard
+        user={user}
+        onLogout={() => {
+          logoutUser();
+          setUser(null);
+          setTickets([]);
+          setSelectedTicket(null);
+        }}
+      />
+    );
+  }
+
+  if (user.role === "agent") {
+    return (
+      <AgentDashboard
+        user={user}
+        onLogout={() => {
+          logoutUser();
+          setUser(null);
+          setTickets([]);
+          setSelectedTicket(null);
+          setMessages([]);
+        }}
+      />
+    );
+  }
+
+  if (user.role !== "admin") {
+    logoutUser();
+    return <Auth onLogin={setUser} />;
+  }
 
   return (
     <div className="layout">
@@ -189,11 +273,28 @@ async function sendMessage(event) {
             <p className="breadcrumb">Workspace / Tickets</p>
             <h1>Support Tickets</h1>
           </div>
-          <button className="primary-btn" onClick={() => setShowForm(true)}>
-            + New Ticket
-          </button>
-        </header>
 
+          <div className="topbar-actions">
+            <button
+              className="secondary-btn"
+              onClick={() => {
+                logoutUser();
+                setUser(null);
+                setTickets([]);
+                setSelectedTicket(null);
+              }}
+            >
+              Sign out
+            </button>
+
+            <button
+              className="primary-btn"
+              onClick={() => setShowForm(true)}
+            >
+              + New Ticket
+            </button>
+          </div>
+        </header>
         <section className="welcome">
           <div>
             <p className="eyebrow">SUPPORT OVERVIEW</p>
