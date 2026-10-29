@@ -152,3 +152,26 @@ export async function assignTicket(ticketId, assignedAgentId) {
     }),
   });
 }
+
+export async function createAgent(agent) {
+  return apiRequest("/admin/agents", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(agent),
+  });
+}
+
+
+export async function getAgents() {
+  return apiRequest("/admin/agents");
+}
+
+
+export async function updateAgentStatus(agentId, isActive) {
+  return apiRequest(
+    `/admin/agents/${agentId}/status?is_active=${isActive}`,
+    {
+      method: "PATCH",
+    }
+  );
+}

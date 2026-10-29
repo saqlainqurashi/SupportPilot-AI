@@ -12,6 +12,7 @@ import Auth from "./Auth";
 import "./App.css";
 import CustomerDashboard from "./CustomerDashboard";
 import AgentDashboard from "./AgentDashboard";
+import AgentManagement from "./AgentManagement";
 
 const emptyForm = {
   customer_name: "",
@@ -37,7 +38,7 @@ function App() {
   const [actionLoading, setActionLoading] = useState(false);
   const [user, setUser] = useState(null);
   const [authChecking, setAuthChecking] = useState(true);
-
+  const [activeSection, setActiveSection] = useState("tickets");
   
   useEffect(() => {
     let cancelled = false;
@@ -253,10 +254,26 @@ async function sendMessage(event) {
           <span>SupportPilot<span className="brand-ai"> AI</span></span>
         </div>
 
-        <p className="nav-label">WORKSPACE</p>
-        <div className="nav-item active">▦ <span>Tickets</span></div>
-        <div className="nav-item">◷ <span>Activity</span></div>
-        <div className="nav-item">⚙ <span>Settings</span></div>
+
+          <p className="nav-label">WORKSPACE</p>
+
+          <button
+            className={`nav-item ${activeSection === "tickets" ? "active" : ""}`}
+            onClick={() => setActiveSection("tickets")}
+          >
+            ▦ <span>Tickets</span>
+          </button>
+
+          <button
+            className={`nav-item ${activeSection === "agents" ? "active" : ""}`}
+            onClick={() => setActiveSection("agents")}
+          >
+            ♙ <span>Agent Management</span>
+          </button>
+
+          <div className="nav-item">◷ <span>Activity</span></div>
+          <div className="nav-item">⚙ <span>Settings</span></div>
+
 
         <div className="sidebar-footer">
           <div className="avatar">SP</div>
@@ -270,8 +287,12 @@ async function sendMessage(event) {
       <main className="main">
         <header className="topbar">
           <div>
-            <p className="breadcrumb">Workspace / Tickets</p>
-            <h1>Support Tickets</h1>
+            <p className="breadcrumb">
+              Workspace / {activeSection === "tickets" ? "Tickets" : "Agent Management"}
+            </p>
+            <h1>
+              {activeSection === "tickets" ? "Support Tickets" : "Agent Management"}
+            </h1>
           </div>
 
           <div className="topbar-actions">
@@ -286,15 +307,17 @@ async function sendMessage(event) {
             >
               Sign out
             </button>
-
-            <button
-              className="primary-btn"
-              onClick={() => setShowForm(true)}
-            >
-              + New Ticket
-            </button>
+            {activeSection === "tickets" && (
+              <button
+                className="primary-btn"
+                onClick={() => setShowForm(true)}
+              >
+                + New Ticket
+              </button>
+            )}
           </div>
         </header>
+        {activeSection === "tickets" && (<>
         <section className="welcome">
           <div>
             <p className="eyebrow">SUPPORT OVERVIEW</p>
@@ -410,6 +433,10 @@ async function sendMessage(event) {
             </div>
           )}
         </section>
+          </>
+        )}
+
+        {activeSection === "agents" && <AgentManagement />}
       </main>
 
       {showForm && (

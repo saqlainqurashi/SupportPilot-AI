@@ -168,6 +168,12 @@ def get_current_user(
     if user is None or not user.is_active:
         raise credentials_error
 
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Your account has been deactivated.",
+    )
+
     return user
 
 
@@ -311,6 +317,36 @@ def read_current_user(
     ],
 ):
     return current_user
+
+# =========================================================
+# AGENT LIST (ADMIN ONLY)
+# =========================================================
+
+
+@app.get("/admin/agents")
+def list_agents(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles("admin")),
+):
+    agents = (
+        db.query(User)
+        .filter(User.role == "agent")
+        .order_by(User.created_at.desc())
+        .all()
+    )
+
+    return [
+        {
+            "id": agent.id,
+            "full_name": agent.full_name,
+            "email": agent.email,
+            "role": agent.role,
+            "is_active": agent.is_active,
+            "created_at": agent.created_at,
+        }
+        for agent in agents
+    ]
+
 
 # =========================================================
 # CREATE AGENT (ADMIN ONLY)
@@ -601,6 +637,41 @@ def assign_ticket(
     db.refresh(ticket)
 
     return ticket
+
+# =========================================================
+# UPDATE AGENT STATUS (ADMIN ONLY)
+# =========================================================
+
+
+@app.patch("/admin/agents/{agent_id}/status")
+def update_agent_status(
+    agent_id: int,
+    is_active: bool,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles("admin")),
+):
+    agent = (
+        db.query(User)
+        .filter(User.id == agent_id, User.role == "agent")
+        .first()
+    )
+
+    if not agent:
+        raise HTTPException(
+            status_code=404,
+            detail="Agent not found",
+        )
+
+    agent.is_active = is_active
+    db.commit()
+    db.refresh(agent)
+
+    return {
+        "id": agent.id,
+        "full_name": agent.full_name,
+        "email": agent.email,
+        "is_active": agent.is_active,
+    }
 
 # =========================================================
 # GET TICKET MESSAGES

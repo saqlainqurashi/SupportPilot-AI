@@ -704,3 +704,16 @@ td strong {
 .reply-form button {
   justify-self: end;
 }
+
+button.nav-item {
+  width: 100%;
+  border: none;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+button.nav-item:focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: 2px;
+}
