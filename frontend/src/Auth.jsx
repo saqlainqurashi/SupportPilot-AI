@@ -1,6 +1,5 @@
-
 import { useState } from "react";
-import { loginUser, registerUser } from "./api";
+import { loginUser, registerUser, API_URL } from "./api";
 import "./Auth.css";
 
 export default function Auth({ onLogin }) {
@@ -26,7 +25,7 @@ export default function Auth({ onLogin }) {
       }
 
       await loginUser(email.trim().toLowerCase(), password);
-      const response = await fetch("http://localhost:8000/auth/me", {
+      const response = await fetch(`${API_URL}/auth/me`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("access_token")}`,
         },
