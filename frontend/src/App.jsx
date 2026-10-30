@@ -7,7 +7,6 @@ import {
   addTicketMessage,
   getCurrentUser,
   logoutUser,
-  API_URL,
 } from "./api";
 import Auth from "./Auth";
 import "./App.css";

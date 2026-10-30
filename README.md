@@ -171,6 +171,16 @@ The frontend should run at:
 - Backend API: http://localhost:8000
 - PostgreSQL: localhost:5432
 
+## Frontend Deployment Configuration
+
+The frontend calls FastAPI using `VITE_API_URL`. For a separately hosted frontend and API, set this variable in the frontend hosting provider to the public FastAPI base URL, for example:
+
+```env
+VITE_API_URL=https://your-fastapi-api.example.com
+```
+
+Set it in the frontend project's build environment and redeploy the frontend, because Vite embeds `VITE_*` values during the build. Do not set it to `localhost`: in a deployed browser, that refers to the visitor's own computer. If the frontend and API share a domain behind a reverse proxy, leave it unset and route API paths to FastAPI. The browser connects only to FastAPI; configure the database URL on the backend, not in the frontend.
+
 ## Authentication
 
 The app uses token-based authentication with Bearer JWTs. The frontend stores the token in local storage after login and sends it with authenticated API requests.
