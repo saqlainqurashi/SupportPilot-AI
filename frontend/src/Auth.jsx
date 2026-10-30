@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { loginUser, registerUser, API_URL } from "./api";
+import { loginUser, registerUser, getCurrentUser } from "./api";
 import "./Auth.css";
 
 export default function Auth({ onLogin }) {
@@ -25,18 +25,8 @@ export default function Auth({ onLogin }) {
       }
 
       await loginUser(email.trim().toLowerCase(), password);
-      const response = await fetch(`${API_URL}/auth/me`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error("Could not retrieve your account.");
-      }
-
-      const user = await response.json();
-      onLogin(user);
+      const user = await getCurrentUser();
+      onLogin(user); 
     } catch (err) {
       setError(err.message || "Authentication failed.");
     } finally {
