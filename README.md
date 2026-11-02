@@ -1,6 +1,6 @@
 # SupportPilot AI
 
-SupportPilot AI is a lightweight support desk application for managing customer tickets, agent workflows, and admin operations. The project includes a FastAPI backend, a React + Vite frontend, and a PostgreSQL database container for local development.
+SupportPilot AI is a lightweight support desk application for managing customer tickets, agent workflows, and admin operations. The hosted application uses Neon for PostgreSQL, Render for the FastAPI backend, and Vercel for the React + Vite frontend. Docker Compose is available for running PostgreSQL locally during development.
 
 ## Overview
 
@@ -10,7 +10,7 @@ The application is structured around three primary roles:
 - Agent: views and manages ticket status, priority, and replies
 - Admin: manages agent accounts and can enable or disable agents
 
-The app exposes a REST API and a React dashboard UI, both designed to run locally during development.
+The frontend sends API requests to the FastAPI service. FastAPI connects to the Neon PostgreSQL database using the server-side `DATABASE_URL`.
 
 ## Features
 
@@ -23,14 +23,15 @@ The app exposes a REST API and a React dashboard UI, both designed to run locall
 - Support message threads per ticket
 - Admin-only agent management
 - PostgreSQL persistence via SQLAlchemy
-- Docker-based local database setup
+- Docker-based local database option
 
 ## Tech Stack
 
 - Backend: FastAPI, SQLAlchemy, Pydantic, JWT
 - Frontend: React, Vite
-- Database: PostgreSQL 16
-- Containerization: Docker Compose
+- Database: Neon PostgreSQL
+- Hosting: Render (FastAPI), Vercel (frontend)
+- Local database option: PostgreSQL 16 with Docker Compose
 
 ## Project Structure
 
@@ -65,12 +66,13 @@ Before running the app, make sure you have installed:
 - Python 3.11+
 - Node.js 18+
 - npm
-- Docker Desktop or Docker Engine
 - Git
+
+Docker Desktop or Docker Engine is optional and only needed to run the local PostgreSQL container.
 
 ## Local Development Setup
 
-### 1) Start PostgreSQL with Docker
+### 1) Start local PostgreSQL (optional)
 
 From the project root:
 
@@ -78,7 +80,7 @@ From the project root:
 docker-compose up -d db
 ```
 
-This starts PostgreSQL on port 5432 using the configuration in [docker-compose.yml](docker-compose.yml).
+This starts a local PostgreSQL instance on port 5432 using [docker-compose.yml](docker-compose.yml). For cloud development, use your Neon connection string in `DATABASE_URL` instead.
 
 ### 2) Configure backend environment
 
@@ -116,15 +118,15 @@ On Windows PowerShell:
 pip install -r requirements.txt
 ```
 
-### 5) Create the database tables
+### 5) Create or update the database schema
 
-This project uses SQLAlchemy models and Alembic migrations. To initialize the schema for a fresh database, run:
+This project uses Alembic migrations. From the `backend` directory, apply them to the database selected by `DATABASE_URL`:
 
 ```bash
-python -c "from database import Base, engine; from models import User, Ticket, TicketMessage; Base.metadata.create_all(bind=engine)"
+alembic upgrade head
 ```
 
-If you prefer the migration workflow, you can also use Alembic from the backend directory.
+Use the local database URL for local development, or the Neon URL when intentionally updating the hosted database.
 
 ### 6) Create an admin account
 
@@ -171,15 +173,44 @@ The frontend should run at:
 - Backend API: http://localhost:8000
 - PostgreSQL: localhost:5432
 
-## Frontend Deployment Configuration
+## Hosted Deployment
 
-The frontend calls FastAPI using `VITE_API_URL`. For a separately hosted frontend and API, set this variable in the frontend hosting provider to the public FastAPI base URL, for example:
+The production request path is Vercel frontend → Render FastAPI → Neon PostgreSQL. Configure each service with the following settings.
+
+### Neon database
+
+Create a Neon project and database, then copy its connection string. Configure the Render service's `DATABASE_URL` with the Neon host, database, username, and password. This project uses Psycopg 3, so use the `postgresql+psycopg://` scheme and retain Neon query parameters such as `sslmode=require`:
 
 ```env
-VITE_API_URL=https://your-fastapi-api.example.com
+DATABASE_URL=postgresql+psycopg://<user>:<password>@<host>/<database>?sslmode=require
 ```
 
-Set it in the frontend project's build environment and redeploy the frontend, because Vite embeds `VITE_*` values during the build. Do not set it to `localhost`: in a deployed browser, that refers to the visitor's own computer. If the frontend and API share a domain behind a reverse proxy, leave it unset and route API paths to FastAPI. The browser connects only to FastAPI; configure the database URL on the backend, not in the frontend.
+Keep this value private and configure it on Render only, never in the frontend.
+
+### Render API
+
+Create a Python web service from this repository with `backend` as its root directory. Use these commands:
+
+```text
+Build: pip install -r requirements.txt
+Start: uvicorn main:app --host 0.0.0.0 --port $PORT
+```
+
+Add `DATABASE_URL` from Neon and a strong, private `SECRET_KEY` to the Render service's environment variables. After the service is deployed, run `alembic upgrade head` from the backend root (for example, in the service shell) to apply database migrations.
+
+### Vercel frontend
+
+Create a Vercel project from this repository with `frontend` as its root directory. Use `npm run build` as the build command and `dist` as the output directory. Set this build-time environment variable in Vercel:
+
+```env
+VITE_API_URL=https://supportpilot-api-z7o7.onrender.com
+```
+
+The same value is stored in `frontend/.env.production`. Vercel environment variables take precedence, so remove or update any old `VITE_API_URL` value that points to localhost. Redeploy after changing it because Vite embeds the value during the frontend build. In production, requests should go to the Render host, not `localhost`.
+
+### CORS
+
+The FastAPI CORS allowlist is configured in `backend/main.py`. Ensure it includes the exact production Vercel origin (scheme and hostname, with no path). Add a custom domain there too if one is used. Preview deployments may have different hostnames and need to be allowed separately if they must call the API.
 
 ## Authentication
 
@@ -215,12 +246,11 @@ The app uses token-based authentication with Bearer JWTs. The frontend stores th
 
 ## Database Notes
 
-- Database name: set in your local environment file
-- Username: set in your local environment file
-- Password: set in your local environment file
-- Docker volume: configured in [docker-compose.yml](docker-compose.yml)
+- Production database: Neon PostgreSQL, configured through the Render service's `DATABASE_URL`
+- Local database: optional PostgreSQL container and persistent Docker volume configured in [docker-compose.yml](docker-compose.yml)
+- Schema changes: apply committed Alembic migrations with `alembic upgrade head`
 
-This project also includes a database dump at [supportpilot_backup.sql](supportpilot_backup.sql) that can be used to restore or inspect data, but it should be treated as a backup artifact and not used as a source of live credentials.
+This project also includes a database dump at [supportpilot_backup.sql](supportpilot_backup.sql) that can be used to restore or inspect data, but it is not the live Neon database and must not be used as a source of credentials.
 
 ## Common Commands
 
@@ -264,18 +294,20 @@ npm run dev
 Check the following:
 
 - `backend/.env` exists and contains valid values
-- PostgreSQL is running via Docker
+- For local development, PostgreSQL is running via Docker; for deployment, the Render service has a valid `DATABASE_URL`
 - your virtual environment is active
 - dependencies are installed with `pip install -r requirements.txt`
 
 ### Database connection issues
 
-Make sure the `DATABASE_URL` matches your local PostgreSQL instance:
+For local development, make sure `DATABASE_URL` matches your local PostgreSQL instance:
 
 ```env
 postgresql+psycopg://<db_user>:<db_password>@localhost:5432/<db_name>
 ```
 
+For Render, verify that `DATABASE_URL` is set to the Neon connection string with the `postgresql+psycopg://` scheme and `sslmode=require`.
+
 ### Frontend cannot reach API
 
-Confirm that the backend is running on port 8000 and that the frontend is using the expected API base URL in the client code.
+Confirm that the Render API is available at its public URL, that Vercel's `VITE_API_URL` points to that URL and the frontend has been redeployed, and that the frontend's exact origin is allowed by FastAPI CORS configuration.
