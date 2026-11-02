@@ -116,6 +116,7 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:5173",
         "https://support-pilot-ai-ashy.vercel.app",
+        "https://support-pilot-ewp490503-muhammad-saqlains-projects-1fd94ba0.vercel.app"
     ],
     allow_credentials=True,
     allow_methods=["*"],
