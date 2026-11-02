@@ -1,4 +1,3 @@
-
 import { useCallback, useEffect, useState } from "react";
 import {
   getTickets,
@@ -6,6 +5,7 @@ import {
   addTicketMessage,
   updateTicketStatus,
   updateTicketPriority,
+  analyzeTicket,
 } from "./api";
 import "./AgentDashboard.css";
 
@@ -19,6 +19,9 @@ export default function AgentDashboard({ user, onLogout }) {
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [aiAnalysis, setAiAnalysis] = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState("");
 
   const loadTickets = useCallback(async () => {
     try {
@@ -41,6 +44,8 @@ export default function AgentDashboard({ user, onLogout }) {
     setMessages([]);
     setMessageDraft("");
     setError("");
+    setAiAnalysis(null);
+    setAiError("");
 
     try {
       const data = await getTicketMessages(ticket.id);
@@ -112,6 +117,23 @@ export default function AgentDashboard({ user, onLogout }) {
       setSaving(false);
     }
   }
+
+  async function runAIAnalysis() {
+  if (!selectedTicket) return;
+
+  setAiLoading(true);
+  setAiError("");
+  setAiAnalysis(null);
+
+  try {
+    const result = await analyzeTicket(selectedTicket.id);
+    setAiAnalysis(result);
+  } catch (err) {
+    setAiError(err.message || "AI analysis failed.");
+  } finally {
+    setAiLoading(false);
+  }
+}
 
   const filteredTickets = tickets.filter((ticket) => {
     const query = search.toLowerCase();
@@ -308,6 +330,8 @@ export default function AgentDashboard({ user, onLogout }) {
                   setSelectedTicket(null);
                   setMessages([]);
                   setError("");
+                  setAiError("");
+                  setAiAnalysis(null);
                 }}
               >
                 Close
@@ -317,7 +341,77 @@ export default function AgentDashboard({ user, onLogout }) {
             <div className="agent-description">
               <strong>Issue description</strong>
               <p>{selectedTicket.description}</p>
+            </div>           
+            <div className="agent-ai-panel">
+              <div className="agent-ai-heading">
+                <div>
+                  <span className="agent-ai-label">POWERED BY GEMINI</span>
+                  <h3>AI Ticket Assistant</h3>
+                  <p>Analyze this ticket and get intelligent recommendations.</p>
+                </div>
+
+                <button
+                  className="agent-btn primary"
+                  onClick={runAIAnalysis}
+                  disabled={aiLoading}
+                >
+                  {aiLoading ? "Analyzing..." : "✨ Analyze Ticket"}
+                </button>
+              </div>
+
+              {aiLoading && (
+                <p className="agent-muted">
+                  Gemini is analyzing the ticket. Please wait...
+                </p>
+              )}
+
+              {aiError && (
+                <div className="agent-alert" role="alert">
+                  {aiError}
+                </div>
+              )}
+
+              {aiAnalysis && (
+                <div className="agent-ai-results">
+                  <div className="agent-ai-result">
+                    <strong>Ticket Summary</strong>
+                    <p>{aiAnalysis.summary}</p>
+                  </div>
+
+                  <div className="agent-ai-grid">
+                    <div className="agent-ai-result">
+                      <strong>Suggested Category</strong>
+                      <p>{aiAnalysis.category}</p>
+                    </div>
+
+                    <div className="agent-ai-result">
+                      <strong>Recommended Priority</strong>
+                      <p className="agent-ai-priority">
+                        {aiAnalysis.recommended_priority.toUpperCase()}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="agent-ai-result">
+                    <strong>Suggested Customer Reply</strong>
+                    <p>{aiAnalysis.suggested_reply}</p>
+
+                    <button
+                      className="agent-btn secondary"
+                      type="button"
+                      onClick={() =>
+                        navigator.clipboard.writeText(
+                          aiAnalysis.suggested_reply
+                        )
+                      }
+                    >
+                      Copy suggested reply
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
+
 
             <div className="agent-controls">
               <label>

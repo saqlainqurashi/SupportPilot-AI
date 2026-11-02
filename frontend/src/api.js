@@ -176,3 +176,9 @@ export async function updateAgentStatus(agentId, isActive) {
     }
   );
 }
+
+export async function analyzeTicket(ticketId) {
+  return apiRequest(`/ai/analyze-ticket/${ticketId}`, {
+    method: "POST",
+  });
+}

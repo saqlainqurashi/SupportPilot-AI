@@ -421,3 +421,77 @@
     align-items: flex-start;
   }
 }
+
+
+.agent-ai-panel {
+  margin: 24px 0;
+  padding: 22px;
+  border: 1px solid #d8d5ff;
+  border-radius: 12px;
+  background: #faf9ff;
+}
+
+.agent-ai-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.agent-ai-heading h3 {
+  margin: 6px 0;
+}
+
+.agent-ai-heading p {
+  margin: 5px 0;
+  color: #64748b;
+}
+
+.agent-ai-label {
+  color: #6854d9;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.agent-ai-results {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.agent-ai-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.agent-ai-result {
+  padding: 16px;
+  border: 1px solid #e5e2f5;
+  border-radius: 9px;
+  background: white;
+}
+
+.agent-ai-result strong {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.agent-ai-result p {
+  line-height: 1.6;
+  color: #475569;
+}
+
+.agent-ai-priority {
+  font-weight: 700;
+  color: #6854d9 !important;
+}
+
+@media (max-width: 600px) {
+  .agent-ai-grid {
+    grid-template-columns: 1fr;
+  }
+}
