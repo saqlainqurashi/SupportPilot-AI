@@ -1,8 +1,6 @@
 
-const API_URL = (
-  import.meta.env.VITE_API_URL ||
-  (import.meta.env.DEV ? "http://localhost:8000" : "")
-).replace(/\/$/, "");
+export const API_URL =
+  import.meta.env.VITE_API_URL;
 
 function getAuthHeaders() {
   const token = localStorage.getItem("access_token");
